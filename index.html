@@ -11,7 +11,6 @@
 <link rel="manifest" id="pwa-manifest">
 <title>FidelityPro</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -254,7 +253,6 @@ tr:last-child td{border-bottom:none}
 </head>
 <body>
 
-<!-- INSTALL BANNER -->
 <div id="install-banner">
   <div class="ib-icon">📲</div>
   <div class="ib-text"><strong>Installa FidelityPro</strong><span>Aggiungila alla schermata Home</span></div>
@@ -262,7 +260,6 @@ tr:last-child td{border-bottom:none}
   <button class="ib-close" onclick="document.getElementById('install-banner').classList.remove('show')">✕</button>
 </div>
 
-<!-- iOS GUIDE -->
 <div id="ios-guide">
   <div class="ios-box">
     <h3>📲 Installa su iPhone / iPad</h3>
@@ -274,14 +271,12 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<!-- LOADING -->
 <div id="loading-screen">
   <div class="loading-logo">F</div>
   <div class="loading-spinner"></div>
   <div class="loading-text">Connessione in corso...</div>
 </div>
 
-<!-- SPLASH -->
 <div id="splash">
   <div class="splash-logo">
     <div class="logo-img-wrap"><img id="splash-logo-img" src="" alt=""><span class="logo-placeholder" id="splash-logo-ph">F</span></div>
@@ -306,7 +301,6 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="app">
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -354,7 +348,6 @@ tr:last-child td{border-bottom:none}
 
   <main class="main">
 
-    <!-- ADMIN DASHBOARD -->
     <div id="admin-dashboard" class="page active">
       <div class="page-header">
         <div><div class="page-title">Dashboard</div><div class="page-subtitle" id="dash-date"></div></div>
@@ -372,7 +365,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- ADMIN CLIENTS -->
     <div id="admin-clients" class="page">
       <div class="page-header">
         <div><div class="page-title">Clienti</div><div class="page-subtitle">Gestisci gli account</div></div>
@@ -387,7 +379,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- ADMIN POINTS -->
     <div id="admin-points" class="page">
       <div class="page-header"><div><div class="page-title">Punti</div><div class="page-subtitle">Gestisci punti clienti</div></div></div>
       <div class="points-panel">
@@ -408,7 +399,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- ADMIN REWARDS -->
     <div id="admin-rewards" class="page">
       <div class="page-header">
         <div><div class="page-title">Premi</div><div class="page-subtitle">Catalogo premi</div></div>
@@ -417,7 +407,6 @@ tr:last-child td{border-bottom:none}
       <div class="rewards-grid" id="admin-rewards-grid"></div>
     </div>
 
-    <!-- ADMIN SETTINGS -->
     <div id="admin-settings" class="page">
       <div class="page-header"><div><div class="page-title">Impostazioni</div></div></div>
       <div class="settings-grid">
@@ -449,7 +438,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- CLIENT DASHBOARD -->
     <div id="client-dashboard" class="page">
       <div class="points-hero">
         <div class="points-greeting" id="client-greeting">Ciao! 👋</div>
@@ -472,7 +460,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- CLIENT HISTORY -->
     <div id="client-history" class="page">
       <div class="page-header"><div><div class="page-title">Storico</div><div class="page-subtitle">Tutte le operazioni</div></div></div>
       <div class="table-wrap" style="padding:15px">
@@ -480,7 +467,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- CLIENT REWARDS -->
     <div id="client-rewards" class="page">
       <div class="page-header"><div><div class="page-title">Premi</div><div class="page-subtitle" id="client-pts-avail">Punti: 0</div></div></div>
       <div class="rewards-grid" id="client-rewards-grid"></div>
@@ -488,7 +474,6 @@ tr:last-child td{border-bottom:none}
 
   </main>
 
-  <!-- Admin Bottom Nav -->
   <nav class="bottom-nav" id="admin-bnav">
     <div class="bn-item active" data-page="admin-dashboard" onclick="showPage('admin-dashboard')"><span class="bn-icon">📊</span><span>Home</span></div>
     <div class="bn-item" data-page="admin-clients" onclick="showPage('admin-clients')"><span class="bn-icon">👥</span><span>Clienti</span></div>
@@ -497,7 +482,6 @@ tr:last-child td{border-bottom:none}
     <div class="bn-item" data-page="admin-settings" onclick="showPage('admin-settings')"><span class="bn-icon">⚙️</span><span>Settings</span></div>
   </nav>
 
-  <!-- Client Bottom Nav -->
   <nav class="bottom-nav" id="client-bnav" style="display:none">
     <div class="bn-item active" data-page="client-dashboard" onclick="showPage('client-dashboard')"><span class="bn-icon">🏠</span><span>Home</span></div>
     <div class="bn-item" data-page="client-history" onclick="showPage('client-history')"><span class="bn-icon">📋</span><span>Storico</span></div>
@@ -505,7 +489,6 @@ tr:last-child td{border-bottom:none}
   </nav>
 </div>
 
-<!-- MODALS -->
 <div class="modal-overlay" id="modal-add-client">
   <div class="modal">
     <h3>➕ Nuovo Cliente</h3>
@@ -843,10 +826,17 @@ function addClient(){
   if(clients.find(c=>c.username===user)){showToast('Username già in uso','error');return;}
   const id=genId();
   const newClient={id,name,username:user,password:pass,email,points:0,createdAt:new Date().toISOString()};
-  db.ref('clients/'+id).set(newClient);
-  closeModal('modal-add-client');
-  ['new-client-name','new-client-user','new-client-pass','new-client-email'].forEach(id=>document.getElementById(id).value='');
-  showToast('Cliente creato ✓','success');
+  
+  db.ref('clients/'+id).set(newClient)
+    .then(() => {
+      closeModal('modal-add-client');
+      ['new-client-name','new-client-user','new-client-pass','new-client-email'].forEach(id=>document.getElementById(id).value='');
+      showToast('Cliente creato ✓','success');
+    })
+    .catch((error) => {
+      console.error(error);
+      alert("Errore Firebase: " + error.message);
+    });
 }
 function refreshClientsTable(filter){
   let list=Object.values(DB.clients||{});
@@ -887,12 +877,17 @@ function addPoints(){
   if(!cid||!amt||amt<=0){showToast('Compila tutti i campi','error');return;}
   const c=DB.clients[cid];
   const newPts=(c.points||0)+amt;
-  db.ref('clients/'+cid+'/points').set(newPts);
-  const txId=genId();
-  db.ref('transactions/'+txId).set({id:txId,clientId:cid,type:'earn',points:amt,desc,date:new Date().toISOString()});
-  document.getElementById('pts-amount-add').value='';
-  document.getElementById('pts-desc-add').value='';
-  showToast(`+${amt} pt a ${c.name} ✓ — sincronizzato!`,'success');
+  db.ref('clients/'+cid+'/points').set(newPts)
+    .then(() => {
+      const txId=genId();
+      return db.ref('transactions/'+txId).set({id:txId,clientId:cid,type:'earn',points:amt,desc,date:new Date().toISOString()});
+    })
+    .then(() => {
+      document.getElementById('pts-amount-add').value='';
+      document.getElementById('pts-desc-add').value='';
+      showToast(`+${amt} pt a ${c.name} ✓`,'success');
+    })
+    .catch(err => alert("Errore: " + err.message));
 }
 function subtractPoints(){
   const cid=document.getElementById('pts-client-sub').value;
@@ -901,12 +896,17 @@ function subtractPoints(){
   if(!cid||!amt||amt<=0){showToast('Compila tutti i campi','error');return;}
   const c=DB.clients[cid];
   if((c.points||0)<amt){showToast('Punti insufficienti','error');return;}
-  db.ref('clients/'+cid+'/points').set((c.points||0)-amt);
-  const txId=genId();
-  db.ref('transactions/'+txId).set({id:txId,clientId:cid,type:'redeem',points:amt,desc,date:new Date().toISOString()});
-  document.getElementById('pts-amount-sub').value='';
-  document.getElementById('pts-desc-sub').value='';
-  showToast(`-${amt}pt da ${c.name} — sincronizzato!`,'success');
+  db.ref('clients/'+cid+'/points').set((c.points||0)-amt)
+    .then(() => {
+      const txId=genId();
+      return db.ref('transactions/'+txId).set({id:txId,clientId:cid,type:'redeem',points:amt,desc,date:new Date().toISOString()});
+    })
+    .then(() => {
+      document.getElementById('pts-amount-sub').value='';
+      document.getElementById('pts-desc-sub').value='';
+      showToast(`-${amt}pt da ${c.name} ✓`,'success');
+    })
+    .catch(err => alert("Errore: " + err.message));
 }
 
 // ══════════════════════════════════════════
@@ -977,11 +977,16 @@ document.getElementById('confirm-redeem-btn').onclick=function(){
   const r=DB.rewards[rtId];
   const c=DB.clients[CU.id];
   if(!r||!c||(c.points||0)<r.points){showToast('Punti insufficienti','error');return;}
-  db.ref('clients/'+c.id+'/points').set((c.points||0)-r.points);
-  const txId=genId();
-  db.ref('transactions/'+txId).set({id:txId,clientId:c.id,type:'redeem',points:r.points,desc:`Premio: ${r.name}`,date:new Date().toISOString()});
-  closeModal('modal-redeem');
-  showToast(`"${r.name}" riscattato! ✓`,'success');
+  db.ref('clients/'+c.id+'/points').set((c.points||0)-r.points)
+    .then(() => {
+      const txId=genId();
+      return db.ref('transactions/'+txId).set({id:txId,clientId:c.id,type:'redeem',points:r.points,desc:`Premio: ${r.name}`,date:new Date().toISOString()});
+    })
+    .then(() => {
+      closeModal('modal-redeem');
+      showToast(`"${r.name}" riscattato! ✓`,'success');
+    })
+    .catch(err => alert("Errore: " + err.message));
 };
 
 // ══════════════════════════════════════════
