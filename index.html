@@ -293,6 +293,7 @@ td{padding:11px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04
     <div class="bn-item" onclick="showPage('admin-clients')"><span class="bn-icon">👥</span>Clienti</div>
     <div class="bn-item" onclick="showPage('admin-points')"><span class="bn-icon">⭐</span>Punti</div>
     <div class="bn-item" onclick="showPage('admin-rewards')"><span class="bn-icon">🎁</span>Premi</div>
+    <div class="bn-item" onclick="showPage('admin-settings')"><span class="bn-icon">⚙️</span>Settings</div>
   </nav>
 
   <nav class="bottom-nav" id="client-bnav" style="display:none">
@@ -364,7 +365,7 @@ function doLogin() {
   const p = document.getElementById('login-pass').value;
   if(window.currentRole === 'admin') {
     if(u === 'admin' && p === 'admin123') { CU = {role:'admin', name:'Admin'}; launch(); }
-    else alert('Errore');
+    else alert('Errore: Username o Password errati.');
   } else {
     const c = Object.values(DB.clients).find(x => x.username === u && x.password === p);
     if(c) { CU = {role:'client', ...c}; launch(); }
@@ -389,6 +390,13 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.bn-item').forEach(i => i.classList.remove('active'));
+  // Evidenzia icona attiva
+  const items = document.querySelectorAll('.bn-item');
+  if(id.includes('dashboard')) items[0].classList.add('active');
+  if(id.includes('clients')) items[1].classList.add('active');
+  if(id.includes('points')) items[2].classList.add('active');
+  if(id.includes('rewards')) items[3].classList.add('active');
+  if(id.includes('settings')) items[4].classList.add('active');
 }
 
 // ADMIN ACTIONS
@@ -412,9 +420,17 @@ function deleteReward(id) {
 }
 function resetRewards() {
   if(confirm('ATTENZIONE: Questo cancellerà TUTTI i premi nel database. Continuare?')) {
-    db.ref('rewards').remove().then(() => showToast('Database premi pulito!'));
+    db.ref('rewards').remove().then(() => {
+      showToast('Database premi pulito!');
+      showPage('admin-dashboard');
+    });
   }
 }
+function saveSettings() {
+  const name = document.getElementById('set-app-name').value;
+  db.ref('app/name').set(name).then(() => showToast('Nome salvato!'));
+}
+
 function adjustPoints(type) {
   const cid = document.getElementById('pts-client-select').value;
   const amt = parseInt(document.getElementById('pts-amount').value);
@@ -430,6 +446,7 @@ function adjustPoints(type) {
 // UI UPDATES
 function updateUI() {
   document.getElementById('tb-name').textContent = DB.app.name;
+  document.getElementById('set-app-name').value = DB.app.name;
   
   // Update Admin
   const cList = Object.values(DB.clients);
@@ -437,7 +454,6 @@ function updateUI() {
   document.getElementById('pts-client-select').innerHTML = cList.map(c => `<option value="${c.id}">${c.name} (${c.points}pt)</option>`).join('');
   
   const rewContainer = document.getElementById('admin-rewards-grid');
-  // MODIFICA CRUCIALE: Usiamo Object.entries per avere l'ID corretto di Firebase
   rewContainer.innerHTML = Object.entries(DB.rewards).map(([id, r]) => `
     <div class="reward-card">
       <div class="r-icon">${r.icon || '🎁'}</div>
