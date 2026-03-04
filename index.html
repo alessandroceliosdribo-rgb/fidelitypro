@@ -580,15 +580,12 @@ const genId=()=>db.ref().push().key;
 //  FIREBASE LISTENERS — carica dati live
 // ══════════════════════════════════════════
 function startListeners(){
-  // App settings
   db.ref('app').on('value',snap=>{
     if(snap.val()){DB.app={...DB.app,...snap.val()};applyAppSettings();}
   });
-  // Admin credentials
   db.ref('admin').on('value',snap=>{
     if(snap.val()) DB.admin={...DB.admin,...snap.val()};
   });
-  // Clients — aggiornamento live
   db.ref('clients').on('value',snap=>{
     DB.clients=snap.val()||{};
     if(CU&&CU.role==='admin'){
@@ -602,25 +599,17 @@ function startListeners(){
     }
     if(CU&&CU.role==='client') refreshClientDashboard();
   });
-  // Rewards — aggiornamento live
+
+  // MODIFICA QUI: Rimosso auto-popolamento premi di default
   db.ref('rewards').on('value',snap=>{
     DB.rewards=snap.val()||{};
-    // Aggiungi premi di default se database vuoto
-    if(Object.keys(DB.rewards).length===0){
-      const defaults={
-        r1:{name:'Sconto 5%',points:200,desc:'Sul prossimo acquisto',icon:'💸'},
-        r2:{name:'Omaggio',points:500,desc:'Prodotto a scelta',icon:'🎁'},
-        r3:{name:'Sconto 20%',points:1000,desc:'Su tutto il catalogo',icon:'🏷️'}
-      };
-      db.ref('rewards').set(defaults);
-    }
     const activePage=document.querySelector('.page.active');
     if(activePage){
       if(activePage.id==='admin-rewards') refreshAdminRewards();
       if(activePage.id==='client-rewards') refreshClientRewards();
     }
   });
-  // Transactions — aggiornamento live
+
   db.ref('transactions').on('value',snap=>{
     DB.transactions=snap.val()||{};
     const activePage=document.querySelector('.page.active');
@@ -630,7 +619,6 @@ function startListeners(){
       if(activePage.id==='client-dashboard') refreshClientDashboard();
     }
   });
-  // Connessione online/offline
   db.ref('.info/connected').on('value',snap=>{
     const ind=document.getElementById('sync-indicator');
     if(!ind) return;
@@ -643,9 +631,7 @@ function startListeners(){
 //  INIT — carica dati e mostra splash
 // ══════════════════════════════════════════
 window.addEventListener('load',()=>{
-  // Avvia listeners Firebase
   startListeners();
-  // Aspetta max 3 secondi poi mostra splash
   setTimeout(()=>{
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('splash').style.display='flex';
@@ -677,7 +663,6 @@ function doLogin(){
       CU={role:'admin',username:u,name:'Admin'};launchApp();
     }else err.textContent='Credenziali non valide.';
   }else{
-    // Cerca cliente nel database Firebase
     const clients=Object.values(DB.clients);
     const c=clients.find(x=>x.username===u&&x.password===p);
     if(c){CU={role:'client',username:u,name:c.name,id:c.id};launchApp();}
@@ -834,7 +819,6 @@ function addClient(){
       showToast('Cliente creato ✓','success');
     })
     .catch((error) => {
-      console.error(error);
       alert("Errore Firebase: " + error.message);
     });
 }
@@ -857,7 +841,6 @@ function viewClient(id){
 function deleteClient(id){
   if(!confirm('Eliminare questo cliente?'))return;
   db.ref('clients/'+id).remove();
-  // Rimuovi anche le sue transazioni
   Object.entries(DB.transactions||{}).forEach(([key,t])=>{if(t.clientId===id)db.ref('transactions/'+key).remove();});
   showToast('Cliente eliminato','success');
 }
@@ -924,13 +907,18 @@ function addReward(){
   ['new-reward-name','new-reward-pts','new-reward-desc','new-reward-icon'].forEach(id=>document.getElementById(id).value='');
   showToast('Premio aggiunto ✓','success');
 }
+
+// MODIFICA QUI: Funzione deleteReward corretta e sicura
 function deleteReward(id){
-  db.ref('rewards/'+id).remove();
-  showToast('Premio eliminato','success');
+  if(!confirm('Eliminare questo premio?')) return;
+  db.ref('rewards/'+id).remove()
+    .then(() => showToast('Premio eliminato', 'success'))
+    .catch(err => showToast('Errore nell\'eliminazione', 'error'));
 }
+
 function refreshAdminRewards(){
   const rewards=Object.values(DB.rewards||{});
-  document.getElementById('admin-rewards-grid').innerHTML=rewards.length?rewards.map(r=>`<div class="reward-card"><div class="r-icon">${r.icon}</div><div class="r-name">${r.name}</div><div class="r-pts">⭐ ${r.points.toLocaleString('it-IT')} pt</div><div class="r-desc">${r.desc||''}</div><button class="btn small danger" onclick="deleteReward('${r.id}')" style="margin-top:10px;width:100%">Elimina</button></div>`).join(''):'<div style="color:var(--muted)">Nessun premio</div>';
+  document.getElementById('admin-rewards-grid').innerHTML=rewards.length?rewards.map(r=>`<div class="reward-card"><div class="r-icon">${r.icon}</div><div class="r-name">${r.name}</div><div class="r-pts">⭐ ${r.points.toLocaleString('it-IT')} pt</div><div class="r-desc">${r.desc||''}</div><button class="btn small danger" onclick="deleteReward('${r.id||r.name}')" style="margin-top:10px;width:100%">Elimina</button></div>`).join(''):'<div style="color:var(--muted)">Nessun premio</div>';
 }
 
 // ══════════════════════════════════════════
@@ -968,7 +956,7 @@ function refreshClientRewards(){
   const pts=c?c.points||0:0;
   const sub=document.getElementById('client-pts-avail');if(sub)sub.textContent=`Punti: ${pts.toLocaleString('it-IT')}`;
   const rewards=Object.values(DB.rewards||{});
-  document.getElementById('client-rewards-grid').innerHTML=rewards.length?rewards.map(r=>{const ok=c&&pts>=r.points;return`<div class="reward-card ${ok?'can-redeem':''}" style="${!ok?'opacity:.5':''}"><div class="r-icon">${r.icon}</div><div class="r-name">${r.name}</div><div class="r-pts">⭐ ${r.points.toLocaleString('it-IT')} pt</div><div class="r-desc">${r.desc||''}</div>${c?`<button class="btn small ${ok?'':'secondary'}" onclick="${ok?`openRedeemModal('${r.id}')`:''}" style="margin-top:10px;width:100%;${!ok?'opacity:.4;cursor:default':''}">${ok?'Riscatta 🎁':'Insufficienti'}</button>`:''}</div>`;}).join(''):'<div style="color:var(--muted)">Nessun premio disponibile</div>';
+  document.getElementById('client-rewards-grid').innerHTML=rewards.length?rewards.map(r=>{const ok=c&&pts>=r.points;return`<div class="reward-card ${ok?'can-redeem':''}" style="${!ok?'opacity:.5':''}"><div class="r-icon">${r.icon}</div><div class="r-name">${r.name}</div><div class="r-pts">⭐ ${r.points.toLocaleString('it-IT')} pt</div><div class="r-desc">${r.desc||''}</div>${c?`<button class="btn small ${ok?'':'secondary'}" onclick="${ok?`openRedeemModal('${r.id||r.name}')`:''}" style="margin-top:10px;width:100%;${!ok?'opacity:.4;cursor:default':''}">${ok?'Riscatta 🎁':'Insufficienti'}</button>`:''}</div>`;}).join(''):'<div style="color:var(--muted)">Nessun premio disponibile</div>';
 }
 let rtId=null;
 function openRedeemModal(rid){const r=DB.rewards[rid];if(!r)return;rtId=rid;document.getElementById('redeem-content').innerHTML=`<div style="text-align:center;padding:10px 0"><div style="font-size:48px;margin-bottom:10px">${r.icon}</div><div style="font-size:17px;font-weight:600;margin-bottom:5px">${r.name}</div><div style="color:var(--muted);font-size:13px;margin-bottom:12px">${r.desc||''}</div><div style="font-size:14px">Verranno scalati <strong style="color:var(--gold)">${r.points.toLocaleString('it-IT')} punti</strong></div></div>`;openModal('modal-redeem');}
