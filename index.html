@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FidelityPro">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0D0D0D">
+<link rel="manifest" id="pwa-manifest">
+<title>FidelityPro</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root {
+  --gold:#C9A84C;--gold-light:#F0D080;--gold-dark:#8B6914;
+  --bg:#0D0D0D;--bg2:#161616;--bg3:#1E1E1E;--card:#1A1A1A;
+  --border:#2A2A2A;--text:#F0EDE8;--muted:#777;
+  --green:#4CAF88;--red:#E05555;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100%;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* LOADING */
+#loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:20px}
+.loading-logo{font-family:'Playfair Display',serif;font-size:52px;color:var(--gold)}
+.loading-spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
+.loading-text{font-size:13px;color:var(--muted)}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1000;gap:28px;padding:24px;padding-top:calc(24px + var(--safe-top));padding-bottom:calc(24px + var(--safe-bottom))}
+.app-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--gold);letter-spacing:2px;text-align:center}
+.app-sub{font-size:12px;color:var(--muted);letter-spacing:1px}
+
+/* ── LOGO UNIVERSALE ── */
+/* Contenitore logo: mostra img se presente, altrimenti placeholder testo */
+.logo-box{border-radius:22px;border:2px solid var(--gold);overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-box img{width:100%;height:100%;object-fit:cover;display:none}
+.logo-box.has-logo img{display:block}
+.logo-box.has-logo .logo-ph{display:none}
+.logo-ph{font-family:'Playfair Display',serif;color:var(--gold);font-weight:700;line-height:1}
+
+/* Varianti dimensione */
+.logo-splash{width:90px;height:90px;box-shadow:0 0 40px rgba(201,168,76,.25)}
+.logo-splash .logo-ph{font-size:36px}
+.logo-sidebar{width:42px;height:42px;border-radius:12px}
+.logo-sidebar .logo-ph{font-size:16px}
+.logo-topbar{width:36px;height:36px;border-radius:10px}
+.logo-topbar .logo-ph{font-size:14px}
+.logo-preview{width:100px;height:100px;cursor:pointer;position:relative;transition:opacity .2s}
+.logo-preview .logo-ph{font-size:38px}
+.logo-preview:active{opacity:.8}
+
+/* ROLE BTNS */
+.role-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:340px}
+.role-buttons{display:flex;gap:12px;width:100%}
+.role-btn{flex:1;padding:18px 8px;border-radius:16px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .15s}
+.role-btn span:first-child{font-size:26px}
+.role-btn:active{border-color:var(--gold);color:var(--gold);transform:scale(.96)}
+#install-hint{display:none;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:10px 16px;font-size:12px;color:var(--gold);text-align:center;cursor:pointer;width:100%}
+
+/* LOGIN */
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 22px;width:100%;max-width:360px}
+.login-box h2{font-family:'Playfair Display',serif;color:var(--gold);font-size:20px;margin-bottom:22px;text-align:center}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.form-group input:focus{border-color:var(--gold)}
+.form-group select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.error-msg{color:var(--red);font-size:13px;margin-top:10px;text-align:center}
+
+/* BUTTONS */
+.btn{width:100%;padding:14px;background:var(--gold);border:none;border-radius:14px;color:#000;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;-webkit-appearance:none}
+.btn:active{transform:scale(.97);opacity:.9}
+.btn.secondary{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+.btn.secondary:active{border-color:var(--gold);color:var(--gold)}
+.btn.danger{background:var(--red);color:#fff}
+.btn.green{background:var(--green);color:#fff}
+.btn.small{width:auto;padding:8px 14px;font-size:13px;border-radius:10px}
+
+/* INSTALL BANNER */
+#install-banner{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#1A1508,#2A2010);border-top:2px solid var(--gold-dark);padding:16px 18px calc(16px + var(--safe-bottom));z-index:2000;display:none;align-items:center;gap:12px}
+#install-banner.show{display:flex}
+.ib-btn{background:var(--gold);color:#000;border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;flex-shrink:0}
+.ib-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0}
+
+/* iOS GUIDE */
+#ios-guide{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:3000;display:none;align-items:flex-end;justify-content:center}
+#ios-guide.show{display:flex}
+.ios-box{background:var(--card);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px 22px calc(22px + var(--safe-bottom));width:100%;max-width:480px;animation:slideUp .3s ease}
+
+/* MAIN APP */
+#app{display:none;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{display:none;position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--bg2);border-right:1px solid var(--border);flex-direction:column;padding:22px 0;z-index:100;overflow-y:auto}
+.sidebar-header{padding:0 18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.nav-section{padding:14px 10px 6px}
+.nav-label{font-size:10px;color:var(--muted);letter-spacing:1.5px;padding:0 8px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--muted);transition:all .15s;margin-bottom:2px}
+.nav-item:hover,.nav-item.active{background:rgba(201,168,76,.12);color:var(--gold)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-bottom{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:12px;margin-bottom:10px}
+.user-av{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0}
+
+/* TOPBAR */
+.mobile-topbar{display:flex;position:fixed;top:0;left:0;right:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:calc(12px + var(--safe-top)) 16px 12px;align-items:center;justify-content:space-between;z-index:100}
+.tb-left{display:flex;align-items:center;gap:10px}
+.tb-name{font-family:'Playfair Display',serif;font-size:16px;color:var(--gold)}
+.tb-right{display:flex;align-items:center;gap:8px}
+.tb-avatar{width:36px;height:36px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#000;cursor:pointer;flex-shrink:0}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sync-dot.offline{background:var(--red)}
+
+/* BOTTOM NAV */
+.bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 4px calc(8px + var(--safe-bottom));z-index:100}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:10px;font-weight:500;cursor:pointer;transition:color .12s;-webkit-tap-highlight-color:transparent}
+.bn-icon{font-size:21px;line-height:1}
+.bn-item.active{color:var(--gold)}
+.bn-item:active{transform:scale(.9)}
+
+/* MAIN */
+.main{padding:16px 15px calc(88px + var(--safe-bottom));padding-top:calc(74px + var(--safe-top));min-height:100vh}
+@media(min-width:768px){.sidebar{display:flex}.mobile-topbar,.bottom-nav{display:none}.main{margin-left:240px;padding:30px}}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:10px}
+.page-title{font-family:'Playfair Display',serif;font-size:23px}
+.page-sub{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* STATS */
+.cards-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px}
+@media(min-width:600px){.cards-row{grid-template-columns:repeat(4,1fr)}}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
+.stat-value{font-size:26px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif}
+.stat-label{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* TABLE */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px}
+.table-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.table-title{font-size:14px;font-weight:600}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:340px}
+th{padding:9px 14px;text-align:left;font-size:11px;color:var(--muted);letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.green{background:rgba(76,175,136,.15);color:var(--green)}
+.badge.red{background:rgba(224,85,85,.15);color:var(--red)}
+.badge.gold{background:rgba(201,168,76,.15);color:var(--gold)}
+
+/* CLIENT HERO */
+.points-hero{background:linear-gradient(135deg,#1A1508 0%,#2A2010 60%,#1A1508 100%);border:1px solid var(--gold-dark);border-radius:20px;padding:24px 20px;margin-bottom:16px}
+.points-big{font-size:60px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif;line-height:1}
+.points-lbl{font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:1px}
+.progress-bar{height:7px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-top:14px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:4px;transition:width .6s ease}
+
+/* TX */
+.tx-item{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.tx-item:last-child{border-bottom:none}
+.tx-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.tx-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tx-icon.earn{background:rgba(76,175,136,.15)}
+.tx-icon.redeem{background:rgba(224,85,85,.15)}
+.tx-desc{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-date{font-size:11px;color:var(--muted)}
+.tx-pts{font-size:14px;font-weight:700;flex-shrink:0;margin-left:8px}
+.tx-pts.earn{color:var(--green)}
+.tx-pts.redeem{color:var(--red)}
+
+/* REWARDS */
+.rewards-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(min-width:600px){.rewards-grid{grid-template-columns:repeat(3,1fr);gap:16px}}
+.reward-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 13px}
+.reward-card.unlocked{border-color:rgba(201,168,76,.4)}
+.r-icon{font-size:28px;margin-bottom:10px}
+.r-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.r-pts{color:var(--gold);font-size:12px;font-weight:600}
+
+/* ════════════════════════════
+   LOGO UPLOAD — IMPOSTAZIONI
+   ════════════════════════════ */
+.logo-settings-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0}
+
+/* Area cliccabile con badge "cambia" */
+.logo-click-area{position:relative;cursor:pointer;display:inline-block}
+.logo-click-area:active .logo-preview{opacity:.75}
+.logo-change-badge{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;pointer-events:none}
+
+.logo-upload-label{font-size:13px;color:var(--muted);text-align:center;line-height:1.55}
+.logo-upload-label strong{color:var(--text);display:block;margin-bottom:2px}
+
+.logo-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.logo-action-btn{padding:9px 18px;border-radius:12px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;transition:all .15s}
+.logo-action-btn:active{transform:scale(.96)}
+.logo-action-btn.choose{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+.logo-action-btn.choose:active{background:rgba(201,168,76,.22)}
+.logo-action-btn.remove{background:transparent;color:var(--muted);border:1px solid var(--border);display:none}
+.logo-action-btn.remove:active{color:var(--red);border-color:var(--red)}
+
+/* Upload progress bar */
+.upload-progress{width:100%;height:4px;background:var(--border);border-radius:2px;overflow:hidden;display:none}
+.upload-progress-fill{height:100%;background:var(--gold);width:0%;transition:width .3s ease;border-radius:2px}
+
+/* SETTINGS */
+.settings-grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:600px){.settings-grid{grid-template-columns:1fr 1fr}}
+.settings-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.settings-card h3{font-family:'Playfair Display',serif;font-size:15px;color:var(--gold);margin-bottom:16px}
+.settings-card.full{grid-column:1/-1}
+.points-panel{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:600px){.points-panel{grid-template-columns:1fr 1fr}}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;z-index:500}
+.modal-overlay.open{display:flex}
+@media(min-width:600px){.modal-overlay{align-items:center}}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:22px 18px calc(18px + var(--safe-bottom));width:100%;max-width:480px;animation:slideUp .25s ease;max-height:90vh;overflow-y:auto}
+@media(min-width:600px){.modal{border-radius:20px;padding:28px}}
+.modal h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);margin-bottom:16px}
+.modal-actions{display:flex;gap:10px;margin-top:16px}
+.modal-actions .btn{flex:1}
+
+/* TOAST */
+#toast{position:fixed;top:calc(76px + var(--safe-top));left:50%;transform:translateX(-50%) translateY(-10px);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 18px;font-size:13px;opacity:0;transition:all .25s;z-index:9999;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.success{border-color:var(--green);color:var(--green)}
+#toast.error{border-color:var(--red);color:var(--red)}
+#toast.info{border-color:var(--gold);color:var(--gold)}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(36px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <div style="font-size:30px;flex-shrink:0">📲</div>
+  <div style="flex:1"><strong style="display:block;font-size:14px;color:var(--gold)">Installa FidelityPro</strong><span style="font-size:12px;color:var(--muted)">Aggiungila alla schermata Home</span></div>
+  <button class="ib-btn" onclick="triggerInstall()">Installa</button>
+  <button class="ib-close" onclick="document.getElementById('install-banner').classList.remove('show')">✕</button>
+</div>
+
+<!-- iOS GUIDE -->
+<div id="ios-guide">
+  <div class="ios-box">
+    <h3 style="font-family:'Playfair Display',serif;color:var(--gold);font-size:19px;margin-bottom:18px">📲 Installa su iPhone</h3>
+    <div style="display:flex;gap:12px;margin-bottom:14px"><div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#000;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><div style="font-size:14px;line-height:1.5">Tocca <strong>⎦↑⎡</strong> nella barra di Safari</div></div>
+    <div style="display:flex;gap:12px;margin-bottom:14px"><div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#000;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div><div style="font-size:14px;line-height:1.5">Tocca <strong>"Aggiungi alla schermata Home"</strong></div></div>
+    <div style="display:flex;gap:12px;margin-bottom:18px"><div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#000;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div><div style="font-size:14px;line-height:1.5">Tocca <strong>"Aggiungi"</strong></div></div>
+    <button class="btn" onclick="document.getElementById('ios-guide').classList.remove('show')">Ho capito!</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-logo" id="loading-logo-ph">F</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Connessione in corso...</div>
+</div>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;animation:fadeUp .5s ease both">
+    <!-- Logo splash -->
+    <div class="logo-box logo-splash" id="logo-splash">
+      <img id="logo-splash-img" src="" alt="">
+      <span class="logo-ph" id="logo-splash-ph">F</span>
+    </div>
+    <div class="app-title" id="splash-app-name">FidelityPro</div>
+    <div class="app-sub">RACCOLTA PUNTI</div>
+  </div>
+
+  <div class="role-wrap" id="role-select" style="animation:fadeUp .5s .2s ease both">
+    <div style="font-size:13px;color:var(--muted)">Accedi come</div>
+    <div class="role-buttons">
+      <button class="role-btn" onclick="showLogin('admin')"><span>⚙️</span><span>Admin</span></button>
+      <button class="role-btn" onclick="showLogin('client')"><span>👤</span><span>Cliente</span></button>
+    </div>
+    <div id="install-hint" onclick="showInstallPrompt()">📲 Tocca per installare l'app</div>
+  </div>
+
+  <div class="login-box" id="login-box" style="display:none">
+    <h2 id="login-title">Accesso</h2>
+    <div class="form-group"><label>Username</label><input type="text" id="login-user" autocomplete="username" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-pass" autocomplete="current-password"></div>
+    <button class="btn" onclick="doLogin()">Accedi →</button>
+    <div class="error-msg" id="login-error"></div>
+    <button class="btn secondary" onclick="backToRoles()" style="margin-top:10px">← Indietro</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <!-- Logo sidebar -->
+      <div class="logo-box logo-sidebar" id="logo-sidebar">
+        <img id="logo-sidebar-img" src="" alt="">
+        <span class="logo-ph" id="logo-sidebar-ph">F</span>
+      </div>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:15px;color:var(--gold)" id="sb-app-name">FidelityPro</div>
+        <div style="font-size:11px;color:var(--muted)" id="sb-role">Admin</div>
+      </div>
+    </div>
+    <div id="admin-nav-desk">
+      <div class="nav-section">
+        <div class="nav-label">PRINCIPALE</div>
+        <div class="nav-item active" data-page="admin-dashboard" onclick="showPage('admin-dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
+        <div class="nav-item" data-page="admin-clients" onclick="showPage('admin-clients')"><span class="nav-icon">👥</span>Clienti</div>
+        <div class="nav-item" data-page="admin-points" onclick="showPage('admin-points')"><span class="nav-icon">⭐</span>Punti</div>
+        <div class="nav-item" data-page="admin-rewards" onclick="showPage('admin-rewards')"><span class="nav-icon">🎁</span>Premi</div>
+        <div class="nav-item" data-page="admin-settings" onclick="showPage('admin-settings')"><span class="nav-icon">⚙️</span>Impostazioni</div>
+      </div>
+    </div>
+    <div id="client-nav-desk" style="display:none">
+      <div class="nav-section">
+        <div class="nav-label">IL MIO CONTO</div>
+        <div class="nav-item active" data-page="client-dashboard" onclick="showPage('client-dashboard')"><span class="nav-icon">🏠</span>Home</div>
+        <div class="nav-item" data-page="client-history" onclick="showPage('client-history')"><span class="nav-icon">📋</span>Storico</div>
+        <div class="nav-item" data-page="client-rewards" onclick="showPage('client-rewards')"><span class="nav-icon">🎁</span>Premi</div>
+      </div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-chip"><div class="user-av" id="sb-avatar">A</div><div><div style="font-size:13px;font-weight:500" id="sb-uname">Admin</div><div style="font-size:11px;color:var(--muted)" id="sb-utag">Amministratore</div></div></div>
+      <button class="btn secondary" onclick="logout()" style="font-size:12px;padding:9px">🚪 Esci</button>
+    </div>
+  </aside>
+
+  <div class="mobile-topbar">
+    <div class="tb-left">
+      <!-- Logo topbar -->
+      <div class="logo-box logo-topbar" id="logo-topbar">
+        <img id="logo-topbar-img" src="" alt="">
+        <span class="logo-ph" id="logo-topbar-ph">F</span>
+      </div>
+      <span class="tb-name" id="tb-name">FidelityPro</span>
+    </div>
+    <div class="tb-right">
+      <div class="sync-dot" id="sync-dot"></div>
+      <div class="tb-avatar" id="tb-avatar" onclick="logout()">A</div>
+    </div>
+  </div>
+
+  <main class="main">
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="admin-dashboard" class="page active">
+      <div class="page-header">
+        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date"></div></div>
+      </div>
+      <div style="background:rgba(76,175,136,.1);border:1px solid rgba(76,175,136,.25);border-radius:10px;padding:9px 14px;font-size:12px;color:var(--green);display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0"></div>
+        🔥 Firebase — sincronizzazione in tempo reale attiva
+      </div>
+      <div class="cards-row">
+        <div class="stat-card"><div class="stat-value" id="stat-clients">0</div><div class="stat-label">Clienti</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Punti</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-redeemed">0</div><div class="stat-label">Premi</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-tx">0</div><div class="stat-label">Transazioni</div></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><span class="table-title">Ultime operazioni</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Cliente</th><th>Nota</th><th>Punti</th><th>Data</th></tr></thead><tbody id="recent-tx-table"><tr><td colspan="4" style="color:var(--muted);text-align:center;padding:18px">Nessuna transazione</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ADMIN CLIENTS -->
+    <div id="admin-clients" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Clienti</div></div>
+        <button class="btn small" onclick="openModal('modal-add-client')">+ Nuovo</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Elenco</span>
+          <input type="search" placeholder="🔍 Cerca..." oninput="filterClients(this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:13px;width:140px;outline:none;-webkit-appearance:none">
+        </div>
+        <div class="table-scroll"><table><thead><tr><th>Nome</th><th>User</th><th>Punti</th><th>Livello</th><th></th></tr></thead><tbody id="clients-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ADMIN POINTS -->
+    <div id="admin-points" class="page">
+      <div class="page-header"><div><div class="page-title">Punti</div></div></div>
+      <div class="points-panel">
+        <div class="settings-card">
+          <h3>➕ Aggiungi Punti</h3>
+          <div class="form-group"><label>Cliente</label><select id="pts-client-add"></select></div>
+          <div class="form-group"><label>Quantità</label><input type="number" id="pts-amount-add" placeholder="100" min="1" inputmode="numeric"></div>
+          <div class="form-group"><label>Nota</label><input type="text" id="pts-desc-add" placeholder="es. Acquisto #123"></div>
+          <button class="btn green" onclick="addPoints()">Aggiungi ✓</button>
+        </div>
+        <div class="settings-card">
+          <h3 style="color:var(--red)">➖ Sottrai Punti</h3>
+          <div class="form-group"><label>Cliente</label><select id="pts-client-sub"></select></div>
+          <div class="form-group"><label>Quantità</label><input type="number" id="pts-amount-sub" placeholder="50" min="1" inputmode="numeric"></div>
+          <div class="form-group"><label>Nota</label><input type="text" id="pts-desc-sub" placeholder="es. Premio riscattato"></div>
+          <button class="btn danger" onclick="subtractPoints()">Sottrai</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN REWARDS -->
+    <div id="admin-rewards" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Premi</div></div>
+        <button class="btn small" onclick="openModal('modal-add-reward')">+ Aggiungi</button>
+      </div>
+      <div class="rewards-grid" id="admin-rewards-grid"></div>
+    </div>
+
+    <!-- ═══════════════════════════════
+         ADMIN SETTINGS — LOGO SECTION
+         ═══════════════════════════════ -->
+    <div id="admin-settings" class="page">
+      <div class="page-header"><div><div class="page-title">Impostazioni</div></div></div>
+      <div class="settings-grid">
+
+        <!-- LOGO & NOME -->
+        <div class="settings-card">
+          <h3>🖼️ Logo & Nome App</h3>
+          <div class="logo-settings-wrap">
+
+            <!-- Anteprima cliccabile con badge -->
+            <div class="logo-click-area" onclick="document.getElementById('logo-file-input').click()">
+              <div class="logo-box logo-preview" id="logo-settings-preview">
+                <img id="logo-settings-img" src="" alt="">
+                <span class="logo-ph" id="logo-settings-ph">F</span>
+              </div>
+              <div class="logo-change-badge">✏️ Cambia</div>
+            </div>
+
+            <div class="logo-upload-label">
+              <strong>Logo attività</strong>
+              PNG, JPG o SVG · max 2MB<br>
+              <span style="font-size:11px">Verrà ridimensionato e sincronizzato su tutti i dispositivi</span>
+            </div>
+
+            <!-- Progress bar upload -->
+            <div class="upload-progress" id="upload-progress">
+              <div class="upload-progress-fill" id="upload-progress-fill"></div>
+            </div>
+
+            <div class="logo-actions">
+              <button class="logo-action-btn choose" onclick="document.getElementById('logo-file-input').click()">📁 Scegli immagine</button>
+              <button class="logo-action-btn remove" id="logo-remove-btn" onclick="removeLogo()">🗑️ Rimuovi</button>
+            </div>
+
+            <!-- Input file nascosto -->
+            <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+          </div>
+
+          <hr style="border:0;border-top:1px solid var(--border);margin:18px 0">
+
+          <div class="form-group"><label>Nome App</label><input type="text" id="app-name-input" placeholder="FidelityPro"></div>
+          <button class="btn" onclick="saveAppName()">💾 Salva Nome</button>
+        </div>
+
+        <!-- CREDENZIALI -->
+        <div class="settings-card">
+          <h3>🔐 Credenziali Admin</h3>
+          <div class="form-group"><label>Username</label><input type="text" id="admin-user-input" autocorrect="off" autocapitalize="off"></div>
+          <div class="form-group"><label>Nuova Password</label><input type="password" id="admin-pass-input" placeholder="••••••••"></div>
+          <div class="form-group"><label>Conferma Password</label><input type="password" id="admin-pass-confirm" placeholder="••••••••"></div>
+          <button class="btn" onclick="saveAdminCreds()">Aggiorna</button>
+        </div>
+
+        <!-- FIREBASE STATUS -->
+        <div class="settings-card full">
+          <h3>🔥 Firebase — Sincronizzazione</h3>
+          <div style="background:rgba(76,175,136,.1);border:1px solid rgba(76,175,136,.3);border-radius:10px;padding:14px;font-size:13px;color:var(--green);margin-bottom:14px">
+            ✅ Logo, nome, punti e premi si sincronizzano automaticamente su tutti i dispositivi in tempo reale.
+          </div>
+          <button class="btn small secondary" onclick="exportCSV()">⬇️ Esporta clienti CSV</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CLIENT DASHBOARD -->
+    <div id="client-dashboard" class="page">
+      <div class="points-hero">
+        <div style="font-size:15px;margin-bottom:6px" id="client-greeting">Ciao! 👋</div>
+        <div class="points-big" id="client-pts-big">0</div>
+        <div class="points-lbl">PUNTI DISPONIBILI</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:12px">
+          <span id="c-level-label">🥉 Bronzo</span><span id="c-next-level">→ 500 pt</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="c-progress" style="width:0%"></div></div>
+      </div>
+      <div class="cards-row">
+        <div class="stat-card"><div class="stat-value" id="c-earned">0</div><div class="stat-label">Guadagnati</div></div>
+        <div class="stat-card"><div class="stat-value" id="c-used">0</div><div class="stat-label">Usati</div></div>
+        <div class="stat-card"><div class="stat-value" id="c-redeemed">0</div><div class="stat-label">Premi</div></div>
+        <div class="stat-card"><div class="stat-value" id="c-level-icon" style="font-size:22px">🥉</div><div class="stat-label">Livello</div></div>
+      </div>
+      <div class="table-wrap" style="padding:15px">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px">Ultime operazioni</div>
+        <div id="c-recent-tx"><div style="color:var(--muted);font-size:13px;text-align:center;padding:18px">Nessuna transazione</div></div>
+      </div>
+    </div>
+
+    <!-- CLIENT HISTORY -->
+    <div id="client-history" class="page">
+      <div class="page-header"><div><div class="page-title">Storico</div></div></div>
+      <div class="table-wrap" style="padding:15px">
+        <div id="c-full-history"><div style="color:var(--muted);font-size:13px;text-align:center;padding:18px">Nessuna transazione</div></div>
+      </div>
+    </div>
+
+    <!-- CLIENT REWARDS -->
+    <div id="client-rewards" class="page">
+      <div class="page-header"><div><div class="page-title">Premi</div><div class="page-sub" id="c-pts-avail">Punti: 0</div></div></div>
+      <div class="rewards-grid" id="c-rewards-grid"></div>
+    </div>
+
+  </main>
+
+  <nav class="bottom-nav" id="admin-bnav">
+    <div class="bn-item active" data-page="admin-dashboard" onclick="showPage('admin-dashboard')"><span class="bn-icon">📊</span>Home</div>
+    <div class="bn-item" data-page="admin-clients" onclick="showPage('admin-clients')"><span class="bn-icon">👥</span>Clienti</div>
+    <div class="bn-item" data-page="admin-points" onclick="showPage('admin-points')"><span class="bn-icon">⭐</span>Punti</div>
+    <div class="bn-item" data-page="admin-rewards" onclick="showPage('admin-rewards')"><span class="bn-icon">🎁</span>Premi</div>
+    <div class="bn-item" data-page="admin-settings" onclick="showPage('admin-settings')"><span class="bn-icon">⚙️</span>Settings</div>
+  </nav>
+  <nav class="bottom-nav" id="client-bnav" style="display:none">
+    <div class="bn-item active" data-page="client-dashboard" onclick="showPage('client-dashboard')"><span class="bn-icon">🏠</span>Home</div>
+    <div class="bn-item" data-page="client-history" onclick="showPage('client-history')"><span class="bn-icon">📋</span>Storico</div>
+    <div class="bn-item" data-page="client-rewards" onclick="showPage('client-rewards')"><span class="bn-icon">🎁</span>Premi</div>
+  </nav>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-client">
+  <div class="modal"><h3>➕ Nuovo Cliente</h3>
+    <div class="form-group"><label>Nome</label><input type="text" id="nc-name" placeholder="Mario Rossi" autocorrect="off"></div>
+    <div class="form-group"><label>Username</label><input type="text" id="nc-user" placeholder="mario.rossi" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="nc-pass" placeholder="••••••••"></div>
+    <div class="form-group"><label>Email (opzionale)</label><input type="email" id="nc-email" placeholder="mario@email.it" inputmode="email"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal('modal-add-client')">Annulla</button><button class="btn" onclick="addClient()">Crea ✓</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-add-reward">
+  <div class="modal"><h3>🎁 Nuovo Premio</h3>
+    <div class="form-group"><label>Nome</label><input type="text" id="nr-name" placeholder="Sconto 10%"></div>
+    <div class="form-group"><label>Punti</label><input type="number" id="nr-pts" placeholder="500" inputmode="numeric"></div>
+    <div class="form-group"><label>Descrizione</label><input type="text" id="nr-desc" placeholder="Breve descrizione"></div>
+    <div class="form-group"><label>Emoji</label><input type="text" id="nr-icon" placeholder="🎁" maxlength="2" value="🎁"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal('modal-add-reward')">Annulla</button><button class="btn" onclick="addReward()">Aggiungi</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-client-detail">
+  <div class="modal"><h3>👤 Dettaglio Cliente</h3><div id="client-detail-content"></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal('modal-client-detail')">Chiudi</button></div></div>
+</div>
+<div class="modal-overlay" id="modal-redeem">
+  <div class="modal"><h3>🎁 Riscatta Premio</h3><div id="redeem-content"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal('modal-redeem')">Annulla</button><button class="btn" id="confirm-redeem-btn">Conferma ✓</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+//  FIREBASE
+// ══════════════════════════════════════
+const firebaseConfig = { databaseURL:"https://fidelitypro-dee93-default-rtdb.europe-west1.firebasedatabase.app" };
+firebase.initializeApp(firebaseConfig);
+const FBR = firebase.database();
+
+// ══════════════════════════════════════
+//  PWA
+// ══════════════════════════════════════
+(function(){
+  const m={name:"FidelityPro",short_name:"FidelityPro",display:"standalone",background_color:"#0D0D0D",theme_color:"#0D0D0D",start_url:"./",orientation:"portrait-primary",icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231A1A1A'/%3E%3Ctext y='.9em' font-size='72' x='12' fill='%23C9A84C'%3EF%3C/text%3E%3C/svg%3E",sizes:"512x512",type:"image/svg+xml"}]};
+  document.getElementById('pwa-manifest').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
+})();
+let deferredPrompt=null;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!isStandalone){document.getElementById('install-banner').classList.add('show');document.getElementById('install-hint').style.display='block';}});
+function triggerInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')showToast('App installata! ✓','success');deferredPrompt=null;document.getElementById('install-banner').classList.remove('show');});}
+function showInstallPrompt(){if(deferredPrompt)triggerInstall();else if(isIOS&&!isStandalone)document.getElementById('ios-guide').classList.add('show');else showToast('Menu browser → Aggiungi alla schermata Home','info');}
+if(isIOS&&!isStandalone)setTimeout(()=>{document.getElementById('install-hint').style.display='block';},2000);
+
+// ══════════════════════════════════════
+//  STATO
+// ══════════════════════════════════════
+let CU=null, CR='admin';
+let DATA={app:{name:'FidelityPro',logo:''},admin:{username:'admin',password:'admin123'},clients:{},rewards:{},transactions:{}};
+const LEVELS=[{name:'Bronzo',emoji:'🥉',min:0,max:500},{name:'Argento',emoji:'🥈',min:500,max:1500},{name:'Oro',emoji:'🥇',min:1500,max:3000},{name:'Platino',emoji:'💎',min:3000,max:Infinity}];
+const getLevel=pts=>LEVELS.find(l=>pts>=l.min&&pts<l.max)||LEVELS[LEVELS.length-1];
+const genId=()=>FBR.ref().push().key;
+
+// ══════════════════════════════════════
+//  FIREBASE LISTENERS
+// ══════════════════════════════════════
+function startListeners(){
+  FBR.ref('app').on('value',snap=>{
+    if(snap.val()){DATA.app={...DATA.app,...snap.val()};applyAppSettings();}
+  });
+  FBR.ref('admin').on('value',snap=>{if(snap.val())DATA.admin={...DATA.admin,...snap.val()};});
+  FBR.ref('clients').on('value',snap=>{
+    DATA.clients=snap.val()||{};
+    if(CU&&CU.role==='admin'){refreshClientsTable();refreshPointsSelects();refreshAdminDashboard();}
+    if(CU&&CU.role==='client')refreshClientDashboard();
+  });
+  FBR.ref('rewards').on('value',snap=>{
+    DATA.rewards=snap.val()||{};
+    if(Object.keys(DATA.rewards).length===0)FBR.ref('rewards').set({r1:{id:'r1',name:'Sconto 5%',points:200,desc:'Sul prossimo acquisto',icon:'💸'},r2:{id:'r2',name:'Omaggio',points:500,desc:'Prodotto a scelta',icon:'🎁'},r3:{id:'r3',name:'Sconto 20%',points:1000,desc:'Su tutto il catalogo',icon:'🏷️'}});
+    refreshAdminRewards();
+    if(CU&&CU.role==='client')refreshClientRewards();
+  });
+  FBR.ref('transactions').on('value',snap=>{
+    DATA.transactions=snap.val()||{};
+    refreshAdminDashboard();
+    if(CU&&CU.role==='client'){refreshClientDashboard();refreshClientHistory();}
+  });
+  FBR.ref('.info/connected').on('value',snap=>{
+    const d=document.getElementById('sync-dot');
+    if(d)d.className='sync-dot'+(snap.val()===true?'':' offline');
+  });
+}
+
+// ══════════════════════════════════════
+//  ★ LOGO — GESTIONE COMPLETA ★
+// ══════════════════════════════════════
+
+// Tutti gli elementi logo dell'app raggruppati
+const LOGO_ELEMENTS = [
+  { img:'logo-splash-img',   ph:'logo-splash-ph',   box:'logo-splash'   },
+  { img:'logo-sidebar-img',  ph:'logo-sidebar-ph',  box:'logo-sidebar'  },
+  { img:'logo-topbar-img',   ph:'logo-topbar-ph',   box:'logo-topbar'   },
+  { img:'logo-settings-img', ph:'logo-settings-ph', box:'logo-settings-preview' },
+];
+
+/**
+ * Applica il logo (src base64) a TUTTI i posti dell'interfaccia.
+ * Se src è vuoto/null → mostra la lettera placeholder.
+ */
+function applyLogoEverywhere(src){
+  LOGO_ELEMENTS.forEach(({img,ph,box})=>{
+    const imgEl=document.getElementById(img);
+    const phEl=document.getElementById(ph);
+    const boxEl=document.getElementById(box);
+    if(!imgEl)return;
+    if(src){
+      imgEl.src=src;
+      imgEl.style.display='block';
+      if(phEl)phEl.style.display='none';
+      if(boxEl)boxEl.classList.add('has-logo');
+    }else{
+      imgEl.src='';
+      imgEl.style.display='none';
+      if(phEl)phEl.style.display='block';
+      if(boxEl)boxEl.classList.remove('has-logo');
+    }
+  });
+  // Pulsante "Rimuovi" visibile solo se c'è un logo
+  const removeBtn=document.getElementById('logo-remove-btn');
+  if(removeBtn)removeBtn.style.display=src?'block':'none';
+}
+
+/**
+ * Gestisce l'upload del logo:
+ * 1. Legge il file
+ * 2. Lo comprime (max 200x200, jpeg 85%)
+ * 3. Mostra progress bar animata
+ * 4. Salva su Firebase app/logo
+ * 5. Aggiorna subito l'interfaccia
+ */
+function handleLogoUpload(input){
+  const file=input.files[0];
+  if(!file)return;
+  if(file.size>2*1024*1024){showToast('File troppo grande (max 2MB)','error');input.value='';return;}
+
+  // Mostra progress bar
+  const bar=document.getElementById('upload-progress');
+  const fill=document.getElementById('upload-progress-fill');
+  if(bar)bar.style.display='block';
+  if(fill){fill.style.width='20%';}
+
+  const reader=new FileReader();
+  reader.onload=e=>{
+    if(fill)fill.style.width='50%';
+    const img=new Image();
+    img.onload=()=>{
+      // Comprimi e ridimensiona
+      const canvas=document.createElement('canvas');
+      const MAX=200;
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){
+        if(w>h){h=Math.round(h*MAX/w);w=MAX;}
+        else{w=Math.round(w*MAX/h);h=MAX;}
+      }
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL('image/jpeg',0.85);
+
+      if(fill)fill.style.width='80%';
+
+      // Salva su Firebase
+      FBR.ref('app/logo').set(compressed)
+        .then(()=>{
+          if(fill)fill.style.width='100%';
+          setTimeout(()=>{if(bar)bar.style.display='none';if(fill)fill.style.width='0%';},600);
+          showToast('Logo aggiornato su tutti i dispositivi! ✓','success');
+        })
+        .catch(()=>{
+          if(bar)bar.style.display='none';
+          showToast('Errore nel salvataggio','error');
+        });
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+/**
+ * Rimuove il logo: cancella da Firebase e resetta l'interfaccia.
+ */
+function removeLogo(){
+  if(!confirm('Rimuovere il logo? Tornerà la lettera "F" su tutti i dispositivi.'))return;
+  FBR.ref('app/logo').set('').then(()=>showToast('Logo rimosso','success'));
+}
+
+// ══════════════════════════════════════
+//  APP SETTINGS
+// ══════════════════════════════════════
+function applyAppSettings(){
+  const name=DATA.app.name||'FidelityPro';
+  const logo=DATA.app.logo||'';
+  // Nomi
+  ['splash-app-name','sb-app-name','tb-name'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=name;});
+  document.title=name;
+  // Logo ovunque
+  applyLogoEverywhere(logo);
+  // Campo settings
+  const inp=document.getElementById('app-name-input');
+  if(inp&&document.activeElement!==inp)inp.value=name;
+  // Credenziali settings
+  const uInp=document.getElementById('admin-user-input');
+  if(uInp&&document.activeElement!==uInp)uInp.value=DATA.admin.username||'admin';
+}
+
+function saveAppName(){
+  const name=document.getElementById('app-name-input').value.trim()||'FidelityPro';
+  FBR.ref('app/name').set(name).then(()=>showToast('Nome salvato ✓','success'));
+}
+
+function saveAdminCreds(){
+  const u=document.getElementById('admin-user-input').value.trim();
+  const p=document.getElementById('admin-pass-input').value;
+  const c=document.getElementById('admin-pass-confirm').value;
+  if(!u){showToast('Inserisci username','error');return;}
+  if(p&&p!==c){showToast('Le password non corrispondono','error');return;}
+  const upd={username:u};if(p)upd.password=p;
+  FBR.ref('admin').update(upd).then(()=>{
+    document.getElementById('admin-pass-input').value='';
+    document.getElementById('admin-pass-confirm').value='';
+    showToast('Credenziali aggiornate ✓','success');
+  });
+}
+
+// ══════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════
+function showLogin(role){
+  CR=role;
+  document.getElementById('role-select').style.display='none';
+  document.getElementById('login-box').style.display='block';
+  document.getElementById('login-title').textContent=role==='admin'?'⚙️ Accesso Admin':'👤 Accesso Cliente';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-error').textContent='';
+  setTimeout(()=>document.getElementById('login-user').focus(),150);
+}
+function backToRoles(){document.getElementById('login-box').style.display='none';document.getElementById('role-select').style.display='flex';}
+function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  if(!u||!p){err.textContent='Inserisci username e password.';return;}
+  if(CR==='admin'){
+    if(u===DATA.admin.username&&p===DATA.admin.password){CU={role:'admin',name:'Admin'};launchApp();}
+    else err.textContent='Credenziali non valide.';
+  }else{
+    const c=Object.values(DATA.clients).find(x=>x.username===u&&x.password===p);
+    if(c){CU={role:'client',name:c.name,id:c.id};launchApp();}
+    else err.textContent='Username o password errati.';
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login-box').style.display==='block')doLogin();});
+function logout(){CU=null;document.getElementById('splash').style.display='flex';document.getElementById('app').style.display='none';backToRoles();}
+
+function launchApp(){
+  document.getElementById('splash').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('install-banner').classList.remove('show');
+  updateTopbar();
+  if(CU.role==='admin'){
+    document.getElementById('admin-nav-desk').style.display='block';
+    document.getElementById('client-nav-desk').style.display='none';
+    document.getElementById('admin-bnav').style.display='flex';
+    document.getElementById('client-bnav').style.display='none';
+    showPage('admin-dashboard');
+  }else{
+    document.getElementById('admin-nav-desk').style.display='none';
+    document.getElementById('client-nav-desk').style.display='block';
+    document.getElementById('admin-bnav').style.display='none';
+    document.getElementById('client-bnav').style.display='flex';
+    showPage('client-dashboard');
+  }
+}
+function updateTopbar(){
+  if(!CU)return;
+  const av=CU.name.charAt(0).toUpperCase();
+  ['tb-avatar','sb-avatar'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=av;});
+  const un=document.getElementById('sb-uname');if(un)un.textContent=CU.name;
+  const ut=document.getElementById('sb-utag');if(ut)ut.textContent=CU.role==='admin'?'Amministratore':'Cliente';
+}
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById(id);if(pg)pg.classList.add('active');
+  document.querySelectorAll('.bn-item,.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll(`[data-page="${id}"]`).forEach(n=>n.classList.add('active'));
+  window.scrollTo(0,0);
+  if(id==='admin-dashboard')refreshAdminDashboard();
+  if(id==='admin-clients')refreshClientsTable();
+  if(id==='admin-points')refreshPointsSelects();
+  if(id==='admin-rewards')refreshAdminRewards();
+  if(id==='client-dashboard')refreshClientDashboard();
+  if(id==='client-history')refreshClientHistory();
+  if(id==='client-rewards')refreshClientRewards();
+}
+
+// ══════════════════════════════════════
+//  ADMIN DASHBOARD
+// ══════════════════════════════════════
+function refreshAdminDashboard(){
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  const clients=Object.values(DATA.clients||{});
+  const txs=Object.values(DATA.transactions||{});
+  document.getElementById('stat-clients').textContent=clients.length;
+  const tp=txs.filter(t=>t.type==='earn').reduce((s,t)=>s+t.points,0);
+  document.getElementById('stat-points').textContent=tp>=1000?(tp/1000).toFixed(1)+'k':tp;
+  document.getElementById('stat-redeemed').textContent=txs.filter(t=>t.type==='redeem').length;
+  document.getElementById('stat-tx').textContent=txs.length;
+  const recent=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+  document.getElementById('recent-tx-table').innerHTML=recent.length?recent.map(t=>{
+    const cl=clients.find(c=>c.id===t.clientId);
+    return`<tr><td><strong>${cl?cl.name:'?'}</strong></td><td style="color:var(--muted);font-size:12px">${t.desc||'-'}</td><td><span class="badge ${t.type==='earn'?'green':'red'}">${t.type==='earn'?'+':'-'}${t.points}</span></td><td style="color:var(--muted);font-size:11px">${new Date(t.date).toLocaleDateString('it-IT')}</td></tr>`;
+  }).join(''):'<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:18px">Nessuna transazione</td></tr>';
+}
+
+// ══════════════════════════════════════
+//  CLIENTS
+// ══════════════════════════════════════
+function addClient(){
+  const name=document.getElementById('nc-name').value.trim();
+  const user=document.getElementById('nc-user').value.trim();
+  const pass=document.getElementById('nc-pass').value;
+  const email=document.getElementById('nc-email').value.trim();
+  if(!name||!user||!pass){showToast('Compila tutti i campi','error');return;}
+  if(Object.values(DATA.clients).find(c=>c.username===user)){showToast('Username già in uso','error');return;}
+  const id=genId();
+  FBR.ref('clients/'+id).set({id,name,username:user,password:pass,email,points:0,createdAt:new Date().toISOString()});
+  closeModal('modal-add-client');
+  ['nc-name','nc-user','nc-pass','nc-email'].forEach(i=>document.getElementById(i).value='');
+  showToast('Cliente creato ✓','success');
+}
+function refreshClientsTable(filter){
+  let list=Object.values(DATA.clients||{});
+  if(filter)list=list.filter(c=>c.name.toLowerCase().includes(filter)||c.username.toLowerCase().includes(filter));
+  document.getElementById('clients-table').innerHTML=list.length?list.map(c=>{
+    const lvl=getLevel(c.points||0);
+    return`<tr><td><strong>${c.name}</strong></td><td style="color:var(--muted);font-size:12px">@${c.username}</td><td><strong style="color:var(--gold)">${(c.points||0).toLocaleString('it-IT')}</strong></td><td><span class="badge gold">${lvl.emoji} ${lvl.name}</span></td><td style="white-space:nowrap"><button class="btn small" onclick="viewClient('${c.id}')" style="margin-right:4px">ℹ️</button><button class="btn small danger" onclick="deleteClient('${c.id}')">🗑️</button></td></tr>`;
+  }).join(''):'<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:18px">Nessun cliente</td></tr>';
+}
+function filterClients(v){refreshClientsTable(v.toLowerCase());}
+function viewClient(id){
+  const c=DATA.clients[id];if(!c)return;
+  const txs=Object.values(DATA.transactions||{}).filter(t=>t.clientId===id).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+  const lvl=getLevel(c.points||0);
+  document.getElementById('client-detail-content').innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><div style="width:46px;height:46px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#000;flex-shrink:0">${c.name.charAt(0)}</div><div style="flex:1"><div style="font-size:15px;font-weight:600">${c.name}</div><div style="font-size:12px;color:var(--muted)">@${c.username}</div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif">${(c.points||0).toLocaleString('it-IT')}</div><div style="font-size:11px;color:var(--muted)">${lvl.emoji} ${lvl.name}</div></div></div>${txs.map(t=>`<div class="tx-item"><div class="tx-left"><div class="tx-icon ${t.type}">${t.type==='earn'?'⭐':'🎁'}</div><div style="min-width:0"><div class="tx-desc">${t.desc||'-'}</div><div class="tx-date">${new Date(t.date).toLocaleDateString('it-IT')}</div></div></div><div class="tx-pts ${t.type}">${t.type==='earn'?'+':'-'}${t.points}</div></div>`).join('')||'<div style="color:var(--muted);font-size:13px;padding:10px 0">Nessuna transazione</div>'}`;
+  openModal('modal-client-detail');
+}
+function deleteClient(id){
+  if(!confirm('Eliminare questo cliente?'))return;
+  FBR.ref('clients/'+id).remove();
+  Object.entries(DATA.transactions||{}).forEach(([k,t])=>{if(t.clientId===id)FBR.ref('transactions/'+k).remove();});
+  showToast('Eliminato','success');
+}
+
+// ══════════════════════════════════════
+//  POINTS
+// ══════════════════════════════════════
+function refreshPointsSelects(){
+  const opts='<option value="">Seleziona...</option>'+Object.values(DATA.clients||{}).map(c=>`<option value="${c.id}">${c.name} — ${c.points||0}pt</option>`).join('');
+  ['pts-client-add','pts-client-sub'].forEach(id=>document.getElementById(id).innerHTML=opts);
+}
+function addPoints(){
+  const cid=document.getElementById('pts-client-add').value;
+  const amt=parseInt(document.getElementById('pts-amount-add').value);
+  const desc=document.getElementById('pts-desc-add').value.trim()||'Punti aggiunti';
+  if(!cid||!amt||amt<=0){showToast('Compila tutti i campi','error');return;}
+  const c=DATA.clients[cid];
+  FBR.ref('clients/'+cid+'/points').set((c.points||0)+amt);
+  const txId=genId();
+  FBR.ref('transactions/'+txId).set({id:txId,clientId:cid,type:'earn',points:amt,desc,date:new Date().toISOString()});
+  document.getElementById('pts-amount-add').value='';document.getElementById('pts-desc-add').value='';
+  showToast(`+${amt} pt a ${c.name} ✓`,'success');
+}
+function subtractPoints(){
+  const cid=document.getElementById('pts-client-sub').value;
+  const amt=parseInt(document.getElementById('pts-amount-sub').value);
+  const desc=document.getElementById('pts-desc-sub').value.trim()||'Punti sottratti';
+  if(!cid||!amt||amt<=0){showToast('Compila tutti i campi','error');return;}
+  const c=DATA.clients[cid];
+  if((c.points||0)<amt){showToast('Punti insufficienti','error');return;}
+  FBR.ref('clients/'+cid+'/points').set((c.points||0)-amt);
+  const txId=genId();
+  FBR.ref('transactions/'+txId).set({id:txId,clientId:cid,type:'redeem',points:amt,desc,date:new Date().toISOString()});
+  document.getElementById('pts-amount-sub').value='';document.getElementById('pts-desc-sub').value='';
+  showToast(`-${amt}pt da ${c.name}`,'success');
+}
+
+// ══════════════════════════════════════
+//  REWARDS
+// ══════════════════════════════════════
+function addReward(){
+  const name=document.getElementById('nr-name').value.trim();
+  const pts=parseInt(document.getElementById('nr-pts').value);
+  const desc=document.getElementById('nr-desc').value.trim();
+  const icon=document.getElementById('nr-icon').value||'🎁';
+  if(!name||!pts){showToast('Compila nome e punti','error');return;}
+  const id=genId();
+  FBR.ref('rewards/'+id).set({id,name,points:pts,desc,icon});
+  closeModal('modal-add-reward');
+  ['nr-name','nr-pts','nr-desc'].forEach(i=>document.getElementById(i).value='');document.getElementById('nr-icon').value='🎁';
+  showToast('Premio aggiunto ✓','success');
+}
+function deleteReward(id){FBR.ref('rewards/'+id).remove();showToast('Premio eliminato','success');}
+function refreshAdminRewards(){
+  const rewards=Object.values(DATA.rewards||{});
+  document.getElementById('admin-rewards-grid').innerHTML=rewards.length?rewards.map(r=>`<div class="reward-card"><div class="r-icon">${r.icon||'🎁'}</div><div class="r-name">${r.name}</div><div class="r-pts">⭐ ${(r.points||0).toLocaleString('it-IT')} pt</div><div style="font-size:11px;color:var(--muted);margin-top:5px">${r.desc||''}</div><button class="btn small danger" onclick="deleteReward('${r.id}')" style="margin-top:10px;width:100%">Elimina</button></div>`).join(''):'<div style="color:var(--muted)">Nessun premio</div>';
+}
+
+// ══════════════════════════════════════
+//  CLIENT
+// ══════════════════════════════════════
+function refreshClientDashboard(){
+  if(!CU||CU.role!=='client')return;
+  const c=DATA.clients[CU.id];if(!c)return;
+  const pts=c.points||0;
+  document.getElementById('client-greeting').textContent=`Ciao, ${c.name.split(' ')[0]}! 👋`;
+  document.getElementById('client-pts-big').textContent=pts.toLocaleString('it-IT');
+  const txs=Object.values(DATA.transactions||{}).filter(t=>t.clientId===c.id);
+  document.getElementById('c-earned').textContent=txs.filter(t=>t.type==='earn').reduce((s,t)=>s+t.points,0).toLocaleString('it-IT');
+  document.getElementById('c-used').textContent=txs.filter(t=>t.type==='redeem').reduce((s,t)=>s+t.points,0).toLocaleString('it-IT');
+  document.getElementById('c-redeemed').textContent=txs.filter(t=>t.type==='redeem').length;
+  const lvl=getLevel(pts);const nextLvl=LEVELS[LEVELS.indexOf(lvl)+1];
+  document.getElementById('c-level-label').textContent=lvl.emoji+' '+lvl.name;
+  document.getElementById('c-level-icon').textContent=lvl.emoji;
+  if(nextLvl){const pct=((pts-lvl.min)/(lvl.max-lvl.min))*100;document.getElementById('c-next-level').textContent=`→ ${nextLvl.name} (${nextLvl.min}pt)`;document.getElementById('c-progress').style.width=Math.min(pct,100)+'%';}
+  else{document.getElementById('c-next-level').textContent='🏆 Livello massimo!';document.getElementById('c-progress').style.width='100%';}
+  const recent=txs.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  document.getElementById('c-recent-tx').innerHTML=recent.length?recent.map(txItem).join(''):'<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nessuna transazione</div>';
+}
+function txItem(t){const cls=t.type==='earn'?'earn':'redeem';return`<div class="tx-item"><div class="tx-left"><div class="tx-icon ${cls}">${t.type==='earn'?'⭐':'🎁'}</div><div style="min-width:0"><div class="tx-desc">${t.desc||'-'}</div><div class="tx-date">${new Date(t.date).toLocaleDateString('it-IT')}</div></div></div><div class="tx-pts ${cls}">${t.type==='earn'?'+':'-'}${t.points}</div></div>`;}
+function refreshClientHistory(){
+  if(!CU||CU.role!=='client')return;
+  const txs=Object.values(DATA.transactions||{}).filter(t=>t.clientId===CU.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.getElementById('c-full-history').innerHTML=txs.length?txs.map(txItem).join(''):'<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nessuna transazione</div>';
+}
+function refreshClientRewards(){
+  const c=CU&&CU.role==='client'?DATA.clients[CU.id]:null;
+  const pts=c?c.points||0:0;
+  const sub=document.getElementById('c-pts-avail');if(sub)sub.textContent=`Punti: ${pts.toLocaleString('it-IT')}`;
+  const rewards=Object.values(DATA.rewards||{});
+  document.getElementById('c-rewards-grid').innerHTML=rewards.length?rewards.map(r=>{const ok=c&&pts>=r.points;return`<div class="reward-card ${ok?'unlocked':''}" style="${!ok?'opacity:.5':''}"><div class="r-icon">${r.icon||'🎁'}</div><div class="r-name">${r.name}</div><div class="r-pts">⭐ ${(r.points||0).toLocaleString('it-IT')} pt</div><div style="font-size:11px;color:var(--muted);margin-top:4px">${r.desc||''}</div>${c?`<button class="btn small ${ok?'':'secondary'}" onclick="${ok?`openRedeemModal('${r.id}')`:''}" style="margin-top:10px;width:100%;${!ok?'opacity:.4;cursor:default':''}">${ok?'Riscatta 🎁':'Punti insufficienti'}</button>`:''}</div>`;}).join(''):'<div style="color:var(--muted)">Nessun premio disponibile</div>';
+}
+let rtId=null;
+function openRedeemModal(rid){
+  const r=Object.values(DATA.rewards||{}).find(x=>x.id===rid);
+  if(!r)return;rtId=rid;
+  document.getElementById('redeem-content').innerHTML=`<div style="text-align:center;padding:10px 0"><div style="font-size:50px;margin-bottom:10px">${r.icon||'🎁'}</div><div style="font-size:17px;font-weight:600;margin-bottom:6px">${r.name}</div><div style="color:var(--muted);font-size:13px;margin-bottom:12px">${r.desc||''}</div><div style="font-size:14px">Verranno scalati <strong style="color:var(--gold)">${(r.points||0).toLocaleString('it-IT')} punti</strong></div></div>`;
+  openModal('modal-redeem');
+}
+document.getElementById('confirm-redeem-btn').onclick=function(){
+  if(!rtId||!CU)return;
+  const r=Object.values(DATA.rewards||{}).find(x=>x.id===rtId);
+  const c=DATA.clients[CU.id];
+  if(!r||!c||(c.points||0)<r.points){showToast('Punti insufficienti','error');return;}
+  FBR.ref('clients/'+c.id+'/points').set((c.points||0)-r.points);
+  const txId=genId();
+  FBR.ref('transactions/'+txId).set({id:txId,clientId:c.id,type:'redeem',points:r.points,desc:`Premio: ${r.name}`,date:new Date().toISOString()});
+  closeModal('modal-redeem');showToast(`"${r.name}" riscattato! ✓`,'success');
+};
+
+// ══════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════
+function exportCSV(){
+  const clients=Object.values(DATA.clients||{});
+  const csv=[['Nome','Username','Email','Punti','Livello'],...clients.map(c=>[c.name,c.username,c.email||'',c.points||0,getLevel(c.points||0).name])].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='clienti.csv';a.click();
+  showToast('CSV esportato ✓','success');
+}
+
+// ══════════════════════════════════════
+//  MODALS & TOAST
+// ══════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m){m.classList.remove('open');document.body.style.overflow=''}}));
+let tt;
+function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;clearTimeout(tt);tt=setTimeout(()=>{t.className='';},2800);}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+startListeners();
+window.onload=()=>{
+  setTimeout(()=>{
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('splash').style.display='flex';
+  },1500);
+};
+</script>
+</body>
+</html>
